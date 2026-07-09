@@ -12,6 +12,6 @@
     "pino": "^9.0.0"
   },
   "overrides": {
-    "libsignal": "github:whiskeysockets/libsignal-node#bcea72df9ec34d9d9140ab30619cf479c7c144c7"
+    "libsignal": "https://github.com/whiskeysockets/libsignal-node/archive/bcea72df9ec34d9d9140ab30619cf479c7c144c7.tar.gz"
   }
 }
