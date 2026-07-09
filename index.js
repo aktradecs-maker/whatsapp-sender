@@ -4,6 +4,9 @@ const QRCode = require('qrcode');
 const express = require('express');
 const pino = require('pino');
 
+const PORT = process.env.PORT || 3000;
+console.log('Starting on port', PORT);
+
 const app = express();
 app.use(express.json());
 
@@ -53,7 +56,7 @@ async function startWhatsApp() {
   sock.ev.on('creds.update', saveCreds);
 }
 
-app.get('/', (req, res) => res.send('WhatsApp Sender running'));
+app.get('/', (req, res) => res.send('OK'));
 
 app.get('/qr', (req, res) => {
   if (isReady) {
@@ -75,17 +78,9 @@ app.get('/status', (req, res) => {
 
 app.post('/send', async (req, res) => {
   const { phone, message } = req.body;
-
-  if (!isReady || !sock) {
-    return res.status(503).json({ error: 'WhatsApp not connected' });
-  }
-
-  if (!phone || !message) {
-    return res.status(400).json({ error: 'phone and message required' });
-  }
-
+  if (!isReady || !sock) return res.status(503).json({ error: 'WhatsApp not connected' });
+  if (!phone || !message) return res.status(400).json({ error: 'phone and message required' });
   const jid = phone.replace(/\D/g, '') + '@s.whatsapp.net';
-
   try {
     await sock.sendMessage(jid, { text: message });
     res.json({ success: true });
@@ -94,7 +89,9 @@ app.post('/send', async (req, res) => {
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, '0.0.0.0', () => console.log('Server running on port ' + PORT));
+const server = app.listen(PORT, '0.0.0.0', () => {
+  console.log('Server running on port', PORT);
+});
+server.on('error', (err) => console.error('Server error:', err.message));
 
 startWhatsApp().catch(console.error);
