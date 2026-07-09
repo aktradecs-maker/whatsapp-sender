@@ -1,5 +1,5 @@
 const makeWASocket = require('@whiskeysockets/baileys').default;
-const { useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
+const { useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const QRCode = require('qrcode');
 const express = require('express');
 const pino = require('pino');
@@ -13,11 +13,15 @@ let isReady = false;
 
 async function startWhatsApp() {
   const { state, saveCreds } = await useMultiFileAuthState('./auth_info');
+  const { version } = await fetchLatestBaileysVersion();
+  console.log('Using WA version:', version.join('.'));
 
   sock = makeWASocket({
+    version,
     auth: state,
     logger: pino({ level: 'silent' }),
     printQRInTerminal: false,
+    browser: ['Chrome (Linux)', 'Chrome', '122.0.0'],
   });
 
   sock.ev.on('connection.update', async (update) => {
@@ -26,7 +30,7 @@ async function startWhatsApp() {
     if (qr) {
       qrImageUrl = await QRCode.toDataURL(qr);
       isReady = false;
-      console.log('QR ready — bukak /qr untuk scan');
+      console.log('QR ready');
     }
 
     if (connection === 'open') {
@@ -37,10 +41,11 @@ async function startWhatsApp() {
 
     if (connection === 'close') {
       isReady = false;
-      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
-      console.log('Connection closed, reconnecting:', shouldReconnect);
-      if (shouldReconnect) {
-        setTimeout(startWhatsApp, 3000);
+      const statusCode = lastDisconnect?.error?.output?.statusCode;
+      const reason = Object.keys(DisconnectReason).find(k => DisconnectReason[k] === statusCode) || statusCode;
+      console.log('Connection closed, reason:', reason, 'reconnecting:', statusCode !== DisconnectReason.loggedOut);
+      if (statusCode !== DisconnectReason.loggedOut) {
+        setTimeout(startWhatsApp, 5000);
       }
     }
   });
