@@ -12,7 +12,7 @@ let isReady = false;
 const client = new Client({
   authStrategy: new LocalAuth(),
   puppeteer: {
-    executablePath: process.env.CHROMIUM_PATH || '/run/current-system/sw/bin/chromium',
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium',
     args: [
       '--no-sandbox',
       '--disable-setuid-sandbox',
@@ -41,7 +41,6 @@ client.on('disconnected', () => {
   console.log('WhatsApp disconnected');
 });
 
-// Scan QR via browser
 app.get('/qr', (req, res) => {
   if (isReady) {
     res.send('<h2>✅ WhatsApp sudah connected!</h2>');
@@ -56,12 +55,10 @@ app.get('/qr', (req, res) => {
   }
 });
 
-// Status check
 app.get('/status', (req, res) => {
   res.json({ connected: isReady });
 });
 
-// Send message — dipanggil dari Apps Script
 app.post('/send', (req, res) => {
   const { phone, message } = req.body;
 
@@ -73,7 +70,6 @@ app.post('/send', (req, res) => {
     return res.status(400).json({ error: 'phone and message required' });
   }
 
-  // Format: 601XXXXXXXX@c.us
   const chatId = phone.replace(/\D/g, '') + '@c.us';
 
   client.sendMessage(chatId, message)
