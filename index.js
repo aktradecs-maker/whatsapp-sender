@@ -62,11 +62,7 @@ app.get('/qr', (req, res) => {
   if (isReady) {
     res.send('<h2>&#x2705; WhatsApp sudah connected!</h2>');
   } else if (qrImageUrl) {
-    res.send(`
-      <h2>Scan QR ni dengan WhatsApp kau:</h2>
-      <img src="${qrImageUrl}" style="width:300px"/>
-      <p>Refresh page ni selepas scan</p>
-    `);
+    res.send(`<h2>Scan QR:</h2><img src="${qrImageUrl}" style="width:300px"/>`);
   } else {
     res.send('<h2>Loading QR... refresh dalam 10 saat</h2>');
   }
@@ -76,14 +72,36 @@ app.get('/status', (req, res) => {
   res.json({ connected: isReady });
 });
 
-app.post('/send', async (req, res) => {
-  const { phone, message } = req.body;
+// List all groups — use this to find group IDs for each client
+app.get('/groups', async (req, res) => {
   if (!isReady || !sock) return res.status(503).json({ error: 'WhatsApp not connected' });
-  if (!phone || !message) return res.status(400).json({ error: 'phone and message required' });
-  const jid = phone.replace(/\D/g, '') + '@s.whatsapp.net';
+  try {
+    const groups = await sock.groupFetchAllParticipating();
+    const list = Object.values(groups).map(g => ({
+      id: g.id,
+      name: g.subject,
+      participants: g.participants.length
+    }));
+    list.sort((a, b) => a.name.localeCompare(b.name));
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Send to group or personal number
+app.post('/send', async (req, res) => {
+  const { groupId, phone, message } = req.body;
+
+  if (!isReady || !sock) return res.status(503).json({ error: 'WhatsApp not connected' });
+  if (!message) return res.status(400).json({ error: 'message required' });
+
+  // groupId takes priority; fallback to phone number
+  const jid = groupId || (phone.replace(/\D/g, '') + '@s.whatsapp.net');
+
   try {
     await sock.sendMessage(jid, { text: message });
-    res.json({ success: true });
+    res.json({ success: true, sentTo: jid });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
