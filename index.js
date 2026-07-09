@@ -43,7 +43,7 @@ async function startWhatsApp() {
       isReady = false;
       const statusCode = lastDisconnect?.error?.output?.statusCode;
       const reason = Object.keys(DisconnectReason).find(k => DisconnectReason[k] === statusCode) || statusCode;
-      console.log('Connection closed, reason:', reason, 'reconnecting:', statusCode !== DisconnectReason.loggedOut);
+      console.log('Connection closed, reason:', reason);
       if (statusCode !== DisconnectReason.loggedOut) {
         setTimeout(startWhatsApp, 5000);
       }
@@ -52,6 +52,8 @@ async function startWhatsApp() {
 
   sock.ev.on('creds.update', saveCreds);
 }
+
+app.get('/', (req, res) => res.send('WhatsApp Sender running'));
 
 app.get('/qr', (req, res) => {
   if (isReady) {
@@ -93,6 +95,6 @@ app.post('/send', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Server running on port ' + PORT));
+app.listen(PORT, '0.0.0.0', () => console.log('Server running on port ' + PORT));
 
-startWhatsApp();
+startWhatsApp().catch(console.error);
